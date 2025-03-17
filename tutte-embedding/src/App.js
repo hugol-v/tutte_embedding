@@ -254,30 +254,39 @@ const App = () => {
   
       if (!networkInstance.current) {
         networkInstance.current = new Network(networkRef.current, data, options);
-        
-        // Add event listener for node dragging
-        networkInstance.current.on("dragEnd", function(params) {
+
+        // Add event listener for dragging nodes (start) to stop animation
+        networkInstance.current.on("dragStart", function (params) {
+          stopAnimation();
+        });
+
+        // Add event listener for dragging nodes (end)
+        networkInstance.current.on("dragEnd", function (params) {
           if (params.nodes && params.nodes.length > 0) {
             const nodeId = params.nodes[0];
             const position = networkInstance.current.getPositions([nodeId])[nodeId];
-            
-            setGraphData(prevData => {
-              const updatedNodes = prevData.nodes.map(node => {
-                if (node.id === nodeId) {
-                  return {
-                    ...node,
-                    x: position.x,
-                    y: position.y,
-                    fixed: node.fixed,
-                  };
-                }
-                return node;
-              });
-              
-              return {...prevData, nodes: updatedNodes};
+        
+            setGraphData((prevData) => {
+              const updatedNodes = prevData.nodes.map((node) =>
+                node.id === nodeId
+                  ? { ...node, x: position.x, y: position.y, fixed: node.fixed }
+                  : node
+              );
+        
+              const isPlanar = checkPlanarity(updatedNodes, prevData.edges);
+        
+              // Update node colors based on planarity
+              const coloredNodes = updatedNodes.map((node) =>
+                node.color !== "black"
+                  ? { ...node, color: isPlanar ? "pink" : "skyblue" }
+                  : node
+              );
+        
+              return { ...prevData, nodes: coloredNodes };
             });
           }
         });
+        
   
         // Add event listener for double-clicking on nodes
         networkInstance.current.on("doubleClick", function(params) {
